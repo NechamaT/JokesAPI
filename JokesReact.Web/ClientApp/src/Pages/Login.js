@@ -24,7 +24,7 @@ const Login = () =>{
        localStorage.setItem('auth-token', data.token);
        const {data:user} = await getAxios().get('api/account/getcurrentuser');
        setUser(user);
-       history.push('/viewall')
+       history.push('/')
    }
    catch(e){
        setIsValidLogin(false);

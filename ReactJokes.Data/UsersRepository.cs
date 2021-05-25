@@ -21,7 +21,6 @@ namespace JokesReact.Web
             ctx.Users.Add(user);
             ctx.SaveChanges();
         }
-
         public User Login(string email, string password)
         {
             var user = GetByEmail(email);

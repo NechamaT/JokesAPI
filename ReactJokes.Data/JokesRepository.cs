@@ -44,26 +44,44 @@ namespace JokesReact.Web
             return GetJokes().FirstOrDefault(Joke => Joke.Id == id);
         }
 
-        public Joke UpdateLikes(UserLikedJokes like) 
+        public void UpdateLikes(int userId, int jokeId, bool like)
         {
             using var ctx = new JokesDbContext(_connectionString);
-            var result = ctx.UserLikedJokes.FirstOrDefault(ulj => like.UserId == ulj.UserId && ulj.JokeId == like.JokeId);
-            if(result != null)
+            var userLikeJoke = ctx.UserLikedJokes.FirstOrDefault(u => u.UserId == userId && u.JokeId == jokeId);
+            if(userLikeJoke == null)
             {
-                ctx.Database.ExecuteSqlInterpolated(@$"UPDATE UserLikedJokes 
-                                                    SET Liked ={like.Liked} 
-                                                    Time ={like.Date}
-                                                    WHERE UserId = {like.UserId}
-                                                    AND JokeId = {like.JokeId}");
+                ctx.UserLikedJokes.Add(new UserLikedJokes
+                {
+                    UserId = userId,
+                    JokeId = jokeId,
+                    Date = DateTime.Now,
+                    Liked = like
+                });
             }
             else
             {
-                ctx.UserLikedJokes.Add(like);
+                userLikeJoke.Liked = like;
+                userLikeJoke.Date = DateTime.Now;
             }
-            ctx.SaveChanges();
-            return GetJokeById(like.JokeId);
+
+
         }
 
+        public Counts GetCounts(int jokeId)
+        {
+            using var ctx = new JokesDbContext(_connectionString);
+            return new Counts
+            {
+                LikedCount = ctx.UserLikedJokes.Count(ulj => ulj.JokeId == jokeId && ulj.Liked == true),
+                DislikeCount = ctx.UserLikedJokes.Count(ulj => ulj.JokeId == jokeId && ulj.Liked == false)
+            };
+        }
+
+        public UserLikedJokes GetLike(int userId, int jokeId)
+        {
+            using var ctx = new JokesDbContext(_connectionString);
+            return ctx.UserLikedJokes.FirstOrDefault(usj => usj.JokeId == jokeId && usj.UserId == userId);
+        }
 
     }
 

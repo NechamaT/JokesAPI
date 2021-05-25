@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using JokesReact.Web.ViewModels;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using ReactJokes.Data;
@@ -38,6 +40,61 @@ namespace JokesReact.Web.Controllers
             var repo = new JokesRepository(_connectionString);
             return repo.GetJoke();
         }
+        [HttpGet]
+        [Route("getcounts/{jokeId}")]
+        public Counts GetCounts(int jokeId)
+        {
+            var repo = new JokesRepository(_connectionString);
+            return repo.GetCounts(jokeId);
+        }
+        [HttpPost]
+        [Authorize]
+        [Route("like")]
+        public void Like(LikeViewModel likeViewModel)
+        {
+            var userRepo = new UserRepository(_connectionString);
+            var user = userRepo.GetByEmail(User.Identity.Name);
+            var jokesRepo = new JokesRepository(_connectionString);
+            jokesRepo.UpdateLikes(user.Id, likeViewModel.JokeId, likeViewModel.Like);
 
+        }
+        [HttpGet]
+        [Route("getjokebyid")]
+        public Joke GetJokeById(int id)
+        {
+            var repo = new JokesRepository(_connectionString);
+            return repo.GetJokeById(id);
+        }
+        [HttpGet]
+        [Route("getuserjokestatus/{jokeid}")]
+        public object GetUserJokeStatus(int jokeId)
+        {
+            UserJokeInteractionStatus status = GetStatus(jokeId);
+            return new { status };
+        }
+
+        private UserJokeInteractionStatus GetStatus(int jokeId)
+        {
+
+            if (!User.Identity.IsAuthenticated)
+            {
+                return UserJokeInteractionStatus.Unauthenticated;
+            }
+            var userRepo = new UserRepository(_connectionString);
+            var user = userRepo.GetByEmail(User.Identity.Name);
+            var jokeRepo = new JokesRepository(_connectionString);
+            UserLikedJokes likeStatus = jokeRepo.GetLike(user.Id, jokeId);
+            if (likeStatus == null)
+            {
+                return UserJokeInteractionStatus.NeverInteracted;
+            }
+            if (likeStatus.Date.AddMinutes(5) < DateTime.Now)
+            {
+                return UserJokeInteractionStatus.CanNoLongerInteract;
+            }
+            return likeStatus.Liked
+                ? UserJokeInteractionStatus.Liked
+                : UserJokeInteractionStatus.Disliked;
+        }
     }
 }
